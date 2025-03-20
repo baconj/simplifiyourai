@@ -1,0 +1,18 @@
+# Virtual environment
+.venv/
+
+# Sensitive files
+.env
+
+# Log files
+bot.log
+
+# PyCharm project files
+.idea/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IDE-specific files
+*.code-workspace

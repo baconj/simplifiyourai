@@ -1,0 +1,9 @@
+google-api-python-client==2.165.0
+python-dotenv==1.0.1
+schedule==1.2.2
+tweepy==4.15.0
+
+
+
+
+
