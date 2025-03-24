@@ -1,168 +1,123 @@
 import tweepy
-import schedule
-import time
 import random
 from googleapiclient.discovery import build
 import logging
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timedelta
+from flask import Flask, render_template, request, redirect, url_for
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
-
-# Get the absolute path to the project root
 project_root = os.path.dirname(os.path.abspath(__file__))
 log_file = os.path.join(project_root, "bot.log")
+logging.basicConfig(filename=log_file, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Configure logging
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-# Your X API credentials
+# X API setup
 API_KEY = os.getenv("X_API_KEY")
 API_SECRET = os.getenv("X_API_SECRET")
 ACCESS_TOKEN = os.getenv("X_ACCESS_TOKEN")
 ACCESS_TOKEN_SECRET = os.getenv("X_ACCESS_TOKEN_SECRET")
-
-client = tweepy.Client(
-    consumer_key=API_KEY,
-    consumer_secret=API_SECRET,
-    access_token=ACCESS_TOKEN,
-    access_token_secret=ACCESS_TOKEN_SECRET
-)
+client = tweepy.Client(consumer_key=API_KEY, consumer_secret=API_SECRET, access_token=ACCESS_TOKEN,
+                       access_token_secret=ACCESS_TOKEN_SECRET)
 
 # YouTube API setup
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
-
-def get_grok_tip():
-    tips = [
-        ("AI tip: Use Grok to write X posts with affiliate links. Post 3x/day to grow @simplifiyourai. #AIhustle",
-         "affiliate marketing tutorial"),
-        (
-        "Automate your income: Let AI reply to X comments with value. Link to your Medium for affiliate $$ @simplifiyourai #AIhustle",
-        "automate social media replies"),
-        (
-        "AI hack: Scrape X trends with a bot, then post affiliate products. Start free with Python @simplifiyourai #AIhustle",
-        "scrape social media trends"),
-        (
-        "Passive income idea: Use AI to write eBooks, sell on Gumroad. I can help with the content @simplifiyourai #AIhustle",
-        "write ebooks with ai"),
-        ("Grow your X following: Post AI-generated tips daily. Follow @simplifiyourai for more #AIhustle",
-         "grow social media following"),
-        (
-        "AI automation: Use Zapier + AI to send emails with affiliate links. Low effort, high reward @simplifiyourai #AIhustle",
-        "zapier affiliate marketing"),
-        (
-        "Monetize X: Share AI tips, drive traffic to a $7 cheat sheet. I can write it for you @simplifiyourai #AIhustle",
-        "monetize social media"),
-        ("AI side hustle: Create AI-generated art with DALL-E, sell as NFTs. Start small @simplifiyourai #AIhustle",
-         "ai generated art nft"),
-        (
-        "Automate lead gen: Use AI to find X users in your niche, pitch affiliate offers via DM @simplifiyourai #AIhustle",
-        "automate lead generation"),
-        ("AI content hack: Repurpose X threads into blog posts with AI. Monetize with ads @simplifiyourai #AIhustle",
-         "repurpose social media content"),
-        ("Use AI to write LinkedIn posts, drive traffic to your X. Cross-platform growth @simplifiyourai #AIhustle",
-         "ai linkedin posts"),
-        (
-        "AI email hack: Automate personalized emails with AI, include affiliate links. Scale with Mailchimp @simplifiyourai #AIhustle",
-        "ai email marketing"),
-        ("Create an AI chatbot for your niche, offer it as a service. Charge monthly @simplifiyourai #AIhustle",
-         "create ai chatbot"),
-        ("AI SEO: Use AI to write keyword-rich blog posts, rank on Google, monetize with ads @simplifiyourai #AIhustle",
-         "ai seo blog posts"),
-        (
-        "Automate YouTube: Use AI to script videos, edit with Descript, monetize with affiliate links @simplifiyourai #AIhustle",
-        "ai youtube automation"),
-        (
-        "AI growth hack: Use AI to analyze X data, find viral topics, and post about them. Grow fast @simplifiyourai #AIhustle",
-        "analyze social media data"),
-        (
-        "Monetize your skills: Use AI to create online courses, sell on Udemy. I can help with scripts @simplifiyourai #AIhustle",
-        "create online courses ai"),
-        ("AI affiliate tip: Promote AI tools on X, earn commissions. Start with free trials @simplifiyourai #AIhustle",
-         "promote ai tools affiliate"),
-        ("Automate Pinterest: Use AI to design pins, link to your blog with affiliate offers @simplifiyourai #AIhustle",
-         "ai pinterest automation"),
-        ("AI productivity: Let AI summarize X threads into actionable tips. Share and grow @simplifiyourai #AIhustle",
-         "ai summarize social media"),
-        (
-        "AI money hack: Use AI to transcribe podcasts, turn them into blog posts, monetize with ads @simplifiyourai #AIhustle",
-        "transcribe podcasts with ai"),
-        (
-        "Automate TikTok: Use AI to script short videos, post daily, link to affiliate offers @simplifiyourai #AIhustle",
-        "ai tiktok automation"),
-        ("AI freelance tip: Use AI to write proposals, win gigs on Upwork. Scale your income @simplifiyourai #AIhustle",
-         "ai freelance proposals"),
-        ("Monetize Instagram: Use AI to design Reels, promote affiliate products in bio @simplifiyourai #AIhustle",
-         "ai instagram reels"),
-        (
-        "AI research hack: Use AI to summarize industry reports, share insights on X, grow your brand @simplifiyourai #AIhustle",
-        "ai summarize reports"),
-        ("Passive income: Use AI to create print-on-demand designs, sell on Etsy. Low effort @simplifiyourai #AIhustle",
-         "ai print on demand"),
-        (
-        "AI networking: Use AI to draft personalized outreach messages, connect with influencers on X @simplifiyourai #AIhustle",
-        "ai networking messages"),
-        (
-        "Monetize a newsletter: Use AI to write weekly emails, include affiliate links, grow with Substack @simplifiyourai #AIhustle",
-        "ai newsletter substack"),
-        (
-        "AI ad copy: Use AI to write high-converting ad copy, run FB ads, promote affiliate offers @simplifiyourai #AIhustle",
-        "ai ad copy facebook"),
-        (
-        "Automate reviews: Use AI to write product reviews, post on a blog, earn affiliate commissions @simplifiyourai #AIhustle",
-        "ai product reviews affiliate")
-    ]
-    return random.choice(tips)
+# Flask app
+app = Flask(__name__)
+scheduled_posts = []
 
 
-def get_youtube_video(query):
+def get_trending_topics(niche):
+    """Fetch 5 'trending' topics by searching recent niche-related tweets and extracting common keywords."""
     try:
-        request = youtube.search().list(
-            part="snippet",
-            maxResults=1,
-            q=query,
-            type="video"
-        )
-        response = request.execute()
-        if response["items"]:
-            video_id = response["items"][0]["id"]["videoId"]
-            return f"https://youtu.be/{video_id}"
-        return None
+        # Search recent tweets for the niche
+        query = f"{niche} -filter:retweets lang:en"
+        response = client.search_recent_tweets(query=query, max_results=50, tweet_fields=["text"])
+        if not response.data:
+            return ["No trends found"]
+
+        # Simple keyword extraction (top words from tweets)
+        from collections import Counter
+        words = []
+        for tweet in response.data:
+            words.extend([word.lower() for word in tweet.text.split() if len(word) > 4 and word.isalpha()])
+        common_words = [word for word, count in Counter(words).most_common(5)]
+        return common_words if common_words else ["No trends found"]
     except Exception as e:
-        logging.error(f"Error fetching YouTube video: {e}")
-        return None
+        logging.error(f"Error fetching trends: {e}")
+        return ["Error fetching trends"]
 
 
-def post_to_x():
-    tip, search_query = get_grok_tip()
-    video_url = get_youtube_video(search_query)
+def get_tweets_for_trends(niche, trends):
+    """Fetch 5 tweets related to the niche and trends."""
+    tweets = []
+    try:
+        for trend in trends[:5]:  # Limit to 5
+            query = f"{niche} {trend} -filter:retweets lang:en"
+            response = client.search_recent_tweets(query=query, max_results=1, tweet_fields=["text"])
+            if response.data:
+                tweet_text = response.data[0].text
+                if len(tweet_text) > 140:  # Truncate if too long
+                    tweet_text = tweet_text[:137] + "..."
+                tweets.append(tweet_text)
+            else:
+                tweets.append(f"No tweet found for {trend}")
+    except Exception as e:
+        logging.error(f"Error fetching tweets: {e}")
+        tweets.append("Error fetching tweet")
+    return tweets[:5]  # Ensure max 5
 
-    if video_url:
-        message = f"{tip} Learn more: {video_url}"
-    else:
-        message = tip
 
+def get_youtube_video_options(query):
+    """Fetch 3 YouTube video options for a query."""
+    try:
+        request = youtube.search().list(part="snippet", maxResults=3, q=query + " tutorial -inurl:(live stream)",
+                                        type="video", videoDuration="short")
+        response = request.execute()
+        return [{"url": f"https://youtu.be/{v['id']['videoId']}", "title": v["snippet"]["title"],
+                 "thumbnail": v["snippet"]["thumbnails"]["default"]["url"]} for v in response["items"]]
+    except Exception as e:
+        logging.error(f"Error fetching videos: {e}")
+        return []
+
+
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    if request.method == 'POST':
+        niche = request.form.get('niche', '').strip()
+        if niche:
+            # Get trends and tweets
+            trends = get_trending_topics(niche)
+            tweets = get_tweets_for_trends(niche, trends)
+            # Pair each tweet with 3 video options
+            tweet_video_pairs = []
+            for tweet in tweets:
+                videos = get_youtube_video_options(f"{niche} {tweet}")
+                tweet_video_pairs.append({"tweet": tweet, "videos": videos})
+            return render_template('index.html', pairs=tweet_video_pairs, scheduled=scheduled_posts, niche=niche)
+    return render_template('index.html', pairs=None, scheduled=scheduled_posts, niche="")
+
+
+@app.route('/schedule', methods=['POST'])
+def schedule():
+    tweet = request.form['tweet']
+    video_url = request.form['video']
+    post_time = datetime.utcnow() + timedelta(hours=len(scheduled_posts) * random.uniform(7, 9))
+    message = f"{tweet} Learn more: {video_url}" if video_url else tweet
     if len(message) > 280:
         message = message[:277] + "..."
-
+    scheduled_posts.append({"text": message, "time": post_time.strftime("%Y-%m-%d %H:%M UTC")})
     try:
-        client.create_tweet(text=message)
-        logging.info(f"Posted: {message}")
+        client.create_tweet(text=message, execute_at=int(post_time.timestamp()))
+        logging.info(f"Scheduled: {message}")
     except Exception as e:
-        logging.error(f"Error posting: {e}")
+        logging.error(f"Error: {e}")
+    return redirect(url_for('home'))
 
-
-schedule.every(8).hours.do(post_to_x)
 
 if __name__ == "__main__":
-    post_to_x()
-    while True:
-        schedule.run_pending()
-        time.sleep(60)
+    print("Starting web interface at http://127.0.0.1:5000")
+    app.run(debug=True)
