@@ -1,53 +1,231 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Tweet Scheduler</title>
+    <title>X Post Scheduler</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+        }
+        .video-card {
+            transition: transform 0.2s;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background-color: #fff;
+            margin-bottom: 15px;
+        }
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .video-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .video-meta {
+            font-size: 0.9rem;
+            color: #6c757d;
+            display: flex;
+            gap: 15px;
+        }
+        .video-meta i {
+            margin-right: 5px;
+            color: #007bff;
+        }
+        .form-check-input:checked + label {
+            background-color: #e7f1ff;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .input-group-text {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+            border: none;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+        }
+        .btn-danger:hover {
+            background-color: #b02a37;
+        }
+        .card-header {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: 500;
+        }
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
-        <h2>Schedule Your AI Tweets</h2>
-        <form method="POST" class="mb-4">
-            <div class="mb-3">
-                <label for="niche" class="form-label">Enter Your Niche</label>
-                <input type="text" class="form-control" id="niche" name="niche" value="{{ niche }}" placeholder="e.g., AI side hustles" required>
+        <h2 class="text-center mb-4">Schedule Your X Post</h2>
+        <form method="POST" action="/" class="mb-4">
+            <div class="input-group mb-3">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="topic" name="topic" value="{{ topic }}" placeholder="e.g., Zapier" required>
             </div>
-            <button type="submit" class="btn btn-primary">Get Tweets</button>
+            <div class="filter-group mb-3">
+                <div>
+                    <label for="min_views" class="form-label">Minimum Views</label>
+                    <select class="form-select" id="min_views" name="min_views">
+                        <option value="any" {% if min_views == 'any' %}selected{% endif %}>Any</option>
+                        <option value="10k" {% if min_views == '10k' %}selected{% endif %}>10k+</option>
+                        <option value="50k" {% if min_views == '50k' %}selected{% endif %}>50k+</option>
+                        <option value="100k" {% if min_views == '100k' %}selected{% endif %}>100k+</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="date_range" class="form-label">Date Posted</label>
+                    <select class="form-select" id="date_range" name="date_range">
+                        <option value="any" {% if date_range == 'any' %}selected{% endif %}>Any Time</option>
+                        <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                        <option value="last_3_months" {% if date_range == 'last_3_months' %}selected{% endif %}>Last 3 Months</option>
+                        <option value="last_6_months" {% if date_range == 'last_6_months' %}selected{% endif %}>Last 6 Months</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="duration_filter" class="form-label">Duration</label>
+                    <select class="form-select" id="duration_filter" name="duration_filter">
+                        <option value="any" {% if duration_filter == 'any' %}selected{% endif %}>Any</option>
+                        <option value="short" {% if duration_filter == 'short' %}selected{% endif %}>Short (<4 min)</option>
+                        <option value="medium" {% if duration_filter == 'medium' %}selected{% endif %}>Medium (4-20 min)</option>
+                        <option value="long" {% if duration_filter == 'long' %}selected{% endif %}>Long (>20 min)</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Get Video Options</button>
         </form>
 
-        {% if pairs %}
-        <h3>Tweets & Video Options</h3>
-        {% for pair in pairs %}
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5>Tweet</h5>
-                <p>{{ pair.tweet }}</p>
-                <form action="/schedule" method="POST">
-                    <input type="hidden" name="tweet" value="{{ pair.tweet }}">
-                    <h6>Pick a Video:</h6>
-                    {% for video in pair.videos %}
-                    <div class="form-check">
-                        <!-- Use outer loop.index0 (0-based) and inner loop.index (1-based) -->
-                        <input type="radio" name="video" value="{{ video.url }}" id="video-{{ loop.index0 }}-{{ loop.index }}" required>
-                        <label for="video-{{ loop.index0 }}-{{ loop.index }}">
-                            <img src="{{ video.thumbnail }}" alt="thumbnail" width="120">
-                            {{ video.title }}
-                        </label>
-                    </div>
-                    {% endfor %}
-                    <button type="submit" class="btn btn-primary mt-3">Schedule Post</button>
-                </form>
+        {% if videos is not none %}
+            {% if videos %}
+            <h3 class="mb-3">Video Options for "{{ topic }}"</h3>
+            <div class="card mb-4">
+                <div class="card-header">
+                    Select a Video to Pair with Your Post
+                </div>
+                <div class="card-body">
+                    <form id="schedule-form" action="/schedule" method="POST">
+                        {% for video in videos %}
+                        <div class="video-card d-flex align-items-center p-3">
+                            <div class="form-check d-flex align-items-center w-100">
+                                <input class="form-check-input me-3" type="radio" name="video" value="{{ video.url }}" id="video-{{ loop.index }}" required>
+                                <label class="form-check-label w-100" for="video-{{ loop.index }}">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ video.thumbnail }}" alt="thumbnail" width="120" class="me-3 rounded">
+                                        <div>
+                                            <div class="video-title">{{ video.title }}</div>
+                                            <div class="video-meta">
+                                                <span><i class="bi bi-eye"></i>{{ video.views | int }} views</span>
+                                                <span><i class="bi bi-calendar"></i>{{ video.published_at[:10] }}</span>
+                                                <span><i class="bi bi-clock"></i>{{ video.duration }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="mb-3 mt-3">
+                            <label for="tweet" class="form-label">Write Your Post</label>
+                            <textarea class="form-control" id="tweet" name="tweet" rows="2" placeholder="Enter your post here" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="hashtags" class="form-label">Hashtags (Optional)</label>
+                            <input type="text" class="form-control" id="hashtags" name="hashtags" placeholder="#Zapier #Tech">
+                        </div>
+                        <div class="mb-3">
+                            <label for="post_datetime" class="form-label">Schedule Date & Time</label>
+                            <input type="datetime-local" class="form-control" id="post_datetime" name="post_datetime">
+                        </div>
+                        <div class="button-group">
+                            <button type="submit" form="schedule-form" class="btn btn-primary w-100">Schedule Post</button>
+                            <button type="submit" form="post-now-form" class="btn btn-success w-100">Post Now</button>
+                        </div>
+                    </form>
+                    <form id="post-now-form" action="/post_now" method="POST" style="display: none;">
+                        {% for video in videos %}
+                        <input type="radio" name="video" value="{{ video.url }}" {% if loop.first %}checked{% endif %} style="display: none;">
+                        {% endfor %}
+                        <input type="hidden" name="tweet" id="tweet-hidden">
+                        <input type="hidden" name="hashtags" id="hashtags-hidden">
+                    </form>
+                    <script>
+                        document.getElementById('schedule-form').addEventListener('submit', function(e) {
+                            if (!document.getElementById('post_datetime').value) {
+                                e.preventDefault();
+                                alert('Please select a date and time to schedule the post.');
+                            }
+                        });
+
+                        document.getElementById('post-now-form').addEventListener('submit', function() {
+                            document.getElementById('tweet-hidden').value = document.getElementById('tweet').value;
+                            document.getElementById('hashtags-hidden').value = document.getElementById('hashtags').value;
+                        });
+                    </script>
+                </div>
             </div>
-        </div>
-        {% endfor %}
+            {% else %}
+            <div class="alert alert-warning" role="alert">
+                No videos found for "{{ topic }}" with the selected filters. Try adjusting the filters (e.g., lower the minimum views or expand the date range).
+            </div>
+            {% endif %}
         {% endif %}
 
-        <h3>Scheduled Posts</h3>
-        <ul class="list-group">
-            {% for post in scheduled %}
-            <li class="list-group-item">{{ post.time }}: {{ post.text }}</li>
-            {% endfor %}
-        </ul>
+        <h3 class="mb-3">Scheduled Posts</h3>
+        {% if scheduled %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Post</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for post in scheduled %}
+                <tr>
+                    <td>{{ post.time }}</td>
+                    <td>{{ post.text }}</td>
+                    <td>
+                        <form action="{{ url_for('remove', index=loop.index) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No scheduled posts.</p>
+        {% endif %}
     </div>
 </body>
 </html>
