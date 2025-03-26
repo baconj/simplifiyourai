@@ -16,3 +16,20 @@ __pycache__/
 
 # IDE-specific files
 *.code-workspace
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+
+# Environment variables
+.env
+bot.log
+
+# PyCharm
+.idea/
